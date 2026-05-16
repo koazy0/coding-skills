@@ -6,7 +6,7 @@ set -euo pipefail
 # 用法: bash scripts/install.sh
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-SKILLS_DIR="$(dirname "$SCRIPT_DIR")/skills"
+SKILLS_DIR="$SCRIPT_DIR/skills"
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -66,14 +66,23 @@ install_skill_to() {
 
 install_all_to() {
     local dest_base="$1"
-    find "$SKILLS_DIR" -mindepth 1 -maxdepth 1 -type d | sort | while read -r cat_dir; do
-        local cat_name=$(basename "$cat_dir")
-        find "$cat_dir" -mindepth 1 -maxdepth 1 -type d | sort | while read -r skill_dir; do
-            if [ -f "$skill_dir/SKILL.md" ]; then
-                install_skill_to "$skill_dir" "$dest_base"
-            fi
-        done
-    done
+    while IFS= read -r dir; do
+        local name=$(basename "$dir")
+        if [ -f "$dir/SKILL.md" ]; then
+            # 扁平结构: skills/<name>/SKILL.md
+            local dest_dir="$dest_base/$name"
+            mkdir -p "$dest_dir"
+            cp -r "$dir"/* "$dest_dir/"
+            ok "  → $name"
+        else
+            # 分类结构: skills/<category>/<name>/SKILL.md
+            while IFS= read -r skill_dir; do
+                if [ -f "$skill_dir/SKILL.md" ]; then
+                    install_skill_to "$skill_dir" "$dest_base"
+                fi
+            done < <(find "$dir" -mindepth 1 -maxdepth 1 -type d | sort)
+        fi
+    done < <(find "$SKILLS_DIR" -mindepth 1 -maxdepth 1 -type d | sort)
 }
 
 count_skills() {
