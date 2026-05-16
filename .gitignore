@@ -1,0 +1,16 @@
+# Install artifacts
+.claude/
+.kimi/
+.codex/
+.codebuddy/
+.agents/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
