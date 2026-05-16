@@ -1,31 +1,42 @@
 # Coding Skills
 
-> One-line install. Multi-platform AI coding discipline. Zero configuration.
+<p align="center">
+  <b>Minimalist AI coding discipline for Claude, Kimi, Codex & CodeBuddy</b><br>
+  One-line install · Auto-detect · Zero config
+</p>
 
-A curated collection of **minimalist, battle-tested coding skills** for AI coding agents. Inspired by Andrej Karpathy's viral 110k⭐ coding guidelines.
-
-Compatible with **Claude Code**, **Kimi Code CLI**, **OpenAI Codex**, and **CodeBuddy**.
-
----
-
-## ✨ What It Does
-
-Tired of AI over-engineering your code, refactoring unrelated files, or writing bloated abstractions? These skills enforce **coding discipline** at the agent level:
-
-- **Think Before Coding** — No silent assumptions. Surface tradeoffs.
-- **Simplicity First** — No speculative features. No single-use abstractions.
-- **Surgical Changes** — Touch only what you must. Every line traces to the request.
-- **Goal-Driven Execution** — Tests first. Verify before claiming "done".
+<p align="center">
+  <a href="#installation">⚡ Quick Install</a> ·
+  <a href="#skills">📦 Skills</a> ·
+  <a href="#how-it-works">🧠 How It Works</a>
+</p>
 
 ---
 
-## 🚀 One-Line Install
+## Why
+
+AI coding agents are capable — but undisciplined. They over-engineer, refactor unrelated code, hide confusion, and ship "done" without verifying.
+
+**Coding Skills** gives your agent a set of lightweight, behavior-level rules that enforce:
+
+- **Clarity** — State assumptions, surface tradeoffs, ask when uncertain
+- **Simplicity** — No speculative features, no single-use abstractions
+- **Precision** — Touch only what you must, match existing style
+- **Accountability** — Define verifiable goals before writing code
+
+Inspired by [Andrej Karpathy's observations](https://twitter.com/karpathy) on LLM coding pitfalls and the community's enthusiasm for structured agent behavior.
+
+---
+
+## Installation
+
+### One-liner (Recommended)
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/koazy0/coding-skills/main/install.sh | bash
 ```
 
-Or clone and run locally:
+### Or clone manually
 
 ```bash
 git clone https://github.com/koazy0/coding-skills.git
@@ -33,80 +44,99 @@ cd coding-skills
 bash install.sh
 ```
 
-**That's it.** The installer auto-detects your AI coding tools and installs all skills in one shot.
+The installer auto-detects which AI coding tools you have and installs skills to all of them.
 
-### What Gets Installed
-
-| Platform | Global Path |
-|----------|-------------|
-| Claude Code | `~/.claude/skills/` |
-| Kimi Code CLI | `~/.kimi/skills/` |
-| OpenAI Codex | `~/.codex/skills/` |
-| CodeBuddy | `~/.codebuddy/skills/` |
-
----
-
-## 📦 Skills Included
-
-| Skill | Trigger | Purpose |
-|-------|---------|---------|
-| `karpathy-style` | Writing / reviewing / refactoring code | Minimalist discipline. Prevents overengineering. |
-| `code-audit` | Code review, PRs, diffs | Audit for correctness, scope, simplicity, security. |
-| `commit-style` | Git commits, branches, merges | `[feat]` prefix convention, linear history via rebase. |
-| `feature-workflow` | New features, tests, merges | TDD workflow: branch → test → implement → rebase → merge. |
-| `project-init` | Creating new projects | Scaffold new projects from a template with global rename. |
-| `api-doc-style` | API endpoints, handlers | Go Swagger annotation rules. No hardcoded hosts. No nil arrays. |
-
-Each skill is **under 30 lines**. No bloat. No filler. Just rules that work.
-
----
-
-## 🎯 Why Minimalist?
-
-> *"Every token a skill spends is one the agent can't use on your code."*
-
-These skills follow the same philosophy that made [Karpathy's CLAUDE.md](https://github.com/forrestchang/andrej-karpathy-skills) hit #1 on GitHub Trending:
-
-- **Under 1K tokens** per skill
-- **Actions, not explanations** — Tell the agent what to do, not what things are
-- **Every "don't" has a "do instead"** — Bare prohibitions leave the agent guessing
-- **One good default per decision** — A single best practice beats a menu of options
-
----
-
-## 🛠 Project-Level Baseline
-
-Drop `CLAUDE.md` into your project root for an additional layer of discipline:
+### Add project-level baseline
 
 ```bash
 cp CLAUDE.md /path/to/your-project/CLAUDE.md
 ```
 
-This gives your AI agent **universal coding guidelines** before any skill-specific rules kick in.
+This gives your agent universal coding guidelines *before* any skill-specific rules kick in.
 
 ---
 
-## 📂 Structure
+## Supported Platforms
+
+| Platform | Global Path | Status |
+|----------|-------------|--------|
+| **Claude Code** | `~/.claude/skills/` | ✅ Supported |
+| **Kimi Code CLI** | `~/.kimi/skills/` | ✅ Supported |
+| **OpenAI Codex** | `~/.codex/skills/` | ✅ Supported |
+| **CodeBuddy** | `~/.codebuddy/skills/` | ✅ Supported |
+
+> Kimi Code CLI automatically merges skills from `.kimi/skills`, `.claude/skills`, and `.codex/skills` — so installing to any one of them works.
+
+---
+
+## Skills
+
+Each skill is intentionally **under 30 lines**. No filler. No tutorials. Just rules that stick.
+
+| Skill | When It Triggers | What It Enforces |
+|-------|-----------------|------------------|
+| `karpathy-style` | Writing, reviewing, or refactoring code | Think before coding. Simplicity first. Surgical changes only. |
+| `code-audit` | Code review, PRs, diffs | Correctness, scope control, simplicity, security checks. |
+| `commit-style` | Git commits, branches, merges | `[feat]` prefix, 72-char subjects, rebase-only merges. |
+| `feature-workflow` | New features, tests, merges | TDD flow: branch → red test → green → rebase → merge. |
+| `project-init` | Creating new projects | Scaffold from template, global rename, `go build` ready. |
+| `api-doc-style` | API endpoints, Go handlers | Swagger annotations. No hardcoded hosts. No nil arrays. |
+
+---
+
+## How It Works
+
+AI coding tools scan `SKILL.md` files at startup. When your request matches a skill's `description`, the full rules are loaded into context.
+
+```
+User: "review this PR"
+      ↓
+Agent: scans descriptions → matches "code-audit"
+       ↓
+Agent: loads code-audit/SKILL.md → follows audit rules
+```
+
+Because only the `description` (a single line) is loaded at startup, you can install all 6 skills and pay near-zero token cost until one fires.
+
+---
+
+## Project Structure
 
 ```
 .
-├── install.sh              # Auto-detect + install to all platforms
-├── CLAUDE.md               # Project-level coding baseline
+├── install.sh              # Auto-detect platforms & install
+├── CLAUDE.md               # Universal coding baseline
 └── skills/
-    ├── karpathy-style/     # Minimalist coding discipline
-    ├── code-audit/         # Code review rules
-    ├── commit-style/       # Git commit & branch conventions
-    ├── feature-workflow/   # TDD feature development flow
-    ├── project-init/       # Scaffold from template
-    └── api-doc-style/      # Go Swagger documentation rules
+    ├── karpathy-style/
+    ├── code-audit/
+    ├── commit-style/
+    ├── feature-workflow/
+    ├── project-init/
+    └── api-doc-style/
 ```
 
 ---
 
-## 📝 License
+## Contributing
 
-MIT
+Found a skill that doesn't trigger when it should? Open an issue.
+
+Have a new coding discipline that fits the minimalist style? PRs welcome.
+
+1. Fork the repo
+2. Create a new skill in `skills/<your-skill>/SKILL.md`
+3. Keep it under 30 lines
+4. Submit a PR
 
 ---
 
-If this improves your AI workflow, ⭐ star it!
+## Acknowledgments
+
+- **Andrej Karpathy** for his [public observations](https://twitter.com/karpathy) on LLM coding pitfalls that shaped the core principles
+- The community behind [andrej-karpathy-skills](https://github.com/forrestchang/andrej-karpathy-skills) (MIT License) for demonstrating the impact of concise agent instructions
+
+---
+
+## License
+
+MIT
