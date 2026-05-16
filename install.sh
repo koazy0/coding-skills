@@ -80,6 +80,35 @@ count_skills() {
     find "$SKILLS_DIR" -name "SKILL.md" -type f | wc -l
 }
 
+# === Kimi 配置 ===
+
+configure_kimi() {
+    local config_file="$HOME/.kimi/config.toml"
+    if [ ! -f "$config_file" ]; then
+        warn "  未找到 Kimi 配置文件: $config_file"
+        return
+    fi
+
+    info "  配置 Kimi Code CLI..."
+
+    # 设置 merge_all_available_skills = true
+    if grep -q "^merge_all_available_skills" "$config_file"; then
+        sed -i 's/^merge_all_available_skills[[:space:]]*=.*/merge_all_available_skills = true/' "$config_file"
+    else
+        sed -i '1i\merge_all_available_skills = true' "$config_file"
+    fi
+
+    # 设置 extra_skill_dirs
+    local dirs='["~/.kimi/skills", "~/.claude/skills"]'
+    if grep -q "^extra_skill_dirs" "$config_file"; then
+        sed -i "s#^extra_skill_dirs[[:space:]]*=.*#extra_skill_dirs = $dirs#" "$config_file"
+    else
+        sed -i "/^merge_all_available_skills/a\\extra_skill_dirs = $dirs" "$config_file"
+    fi
+
+    ok "  Kimi 配置已更新"
+}
+
 # === 主流程 ===
 
 main() {
@@ -133,6 +162,11 @@ main() {
         info "安装到 $(tool_name "$tool"): $dest"
         mkdir -p "$dest"
         install_all_to "$dest"
+
+        # Kimi 额外配置
+        if [ "$tool" = "kimi" ]; then
+            configure_kimi
+        fi
     done
 
     echo ""
