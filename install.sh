@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Skills 多平台安装脚本
-# 自动检测已安装的 AI 工具，一键全量安装
-# 用法: bash scripts/install.sh
+# Skills multi-platform installer
+# Project structure: flat  (skills/<name>/SKILL.md)
+# Usage: bash install.sh
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SKILLS_DIR="$SCRIPT_DIR/skills"
@@ -15,99 +15,92 @@ CYAN='\033[0;36m'
 BOLD='\033[1m'
 RESET='\033[0m'
 
-info()  { printf "${CYAN}[*]${RESET} %s\n" "$*"; }
-ok()    { printf "${GREEN}[+]${RESET} %s\n" "$*"; }
-warn()  { printf "${YELLOW}[!]${RESET} %s\n" "$*"; }
-fail()  { printf "${RED}[x]${RESET} %s\n" "$*"; exit 1; }
+info() { printf "${CYAN}[*]${RESET} %s\n" "$*"; }
+ok()   { printf "${GREEN}[+]${RESET} %s\n" "$*"; }
+warn() { printf "${YELLOW}[!]${RESET} %s\n" "$*"; }
+fail() { printf "${RED}[x]${RESET} %s\n" "$*"; exit 1; }
 
-# === 平台检测 ===
+# === Platform Registry ===
+# key|display_name|install_dir
+# To add a platform: append one line + add install_to_<key>() below.
+
+platform_registry() {
+    cat <<'EOF'
+claude|Claude Code|$HOME/.claude/skills
+kimi|Kimi Code CLI|$HOME/.kimi/skills
+codex|OpenAI Codex|$HOME/.codex/skills
+codebuddy|CodeBuddy|$HOME/.codebuddy/skills
+hermes|Hermes Agent|$HOME/.hermes/skills
+openclaw|OpenClaw|$HOME/.openclaw/skills
+EOF
+}
+
+platform_name() {
+    platform_registry | awk -F'|' -v k="$1" '$1==k {print $2}'
+}
+
+platform_dir() {
+    local dir
+    dir=$(platform_registry | awk -F'|' -v k="$1" '$1==k {print $3}')
+    eval echo "$dir"
+}
 
 detect_tools() {
-    local tools=()
-    [ -d "$HOME/.claude" ] && tools+=("claude")
-    [ -d "$HOME/.kimi" ] && tools+=("kimi")
-    [ -d "$HOME/.codex" ] && tools+=("codex")
-    [ -d "$HOME/.codebuddy" ] && tools+=("codebuddy")
-    printf '%s\n' "${tools[@]}"
+    platform_registry | while IFS='|' read -r key _ _; do
+        [ -d "$HOME/.$key" ] && echo "$key"
+    done
 }
 
-tool_name() {
-    case "$1" in
-        claude) echo "Claude Code" ;;
-        kimi) echo "Kimi Code CLI" ;;
-        codex) echo "OpenAI Codex" ;;
-        codebuddy) echo "CodeBuddy" ;;
-        *) echo "$1" ;;
-    esac
+# === Install Strategies ===
+
+cp_to() {
+    local src="$1" dst="$2"
+    mkdir -p "$dst"
+    cp -r "$src"/* "$dst/"
 }
 
-tool_global_dir() {
-    case "$1" in
-        claude) echo "$HOME/.claude/skills" ;;
-        kimi) echo "$HOME/.kimi/skills" ;;
-        codex) echo "$HOME/.codex/skills" ;;
-        codebuddy) echo "$HOME/.codebuddy/skills" ;;
-    esac
-}
-
-# === 安装逻辑 ===
-
-install_skill_to() {
-    local src_dir="$1"
-    local dest_base="$2"
-    local skill_name=$(basename "$src_dir")
-    local cat_name=$(basename "$(dirname "$src_dir")")
-    local dest_dir="$dest_base/$cat_name/$skill_name"
-
-    mkdir -p "$dest_dir"
-    cp -r "$src_dir"/* "$dest_dir/"
-    ok "  → $cat_name/$skill_name"
-}
-
-install_all_to() {
-    local dest_base="$1"
-    while IFS= read -r dir; do
-        local name=$(basename "$dir")
-        if [ -f "$dir/SKILL.md" ]; then
-            # 扁平结构: skills/<name>/SKILL.md
-            local dest_dir="$dest_base/$name"
-            mkdir -p "$dest_dir"
-            cp -r "$dir"/* "$dest_dir/"
-            ok "  → $name"
-        else
-            # 分类结构: skills/<category>/<name>/SKILL.md
-            while IFS= read -r skill_dir; do
-                if [ -f "$skill_dir/SKILL.md" ]; then
-                    install_skill_to "$skill_dir" "$dest_base"
-                fi
-            done < <(find "$dir" -mindepth 1 -maxdepth 1 -type d | sort)
-        fi
-    done < <(find "$SKILLS_DIR" -mindepth 1 -maxdepth 1 -type d | sort)
+# Flat structure: dest/<name>/SKILL.md
+install_flat_to() {
+    local dest="$1"
+    for skill_dir in "$SKILLS_DIR"/*/; do
+        [ -f "$skill_dir/SKILL.md" ] || continue
+        local name=$(basename "$skill_dir")
+        cp_to "$skill_dir" "$dest/$name"
+        ok "  -> $name"
+    done
 }
 
 count_skills() {
     find "$SKILLS_DIR" -name "SKILL.md" -type f | wc -l
 }
 
-# === Kimi 配置 ===
+# === Per-Platform Installers ===
+# Each platform defines its own: optional config on top of flat install.
+
+install_to_claude()    { install_flat_to "$1"; }
+install_to_kimi()      { install_flat_to "$1"; configure_kimi; }
+install_to_codex()     { install_flat_to "$1"; }
+install_to_codebuddy() { install_flat_to "$1"; }
+install_to_hermes()    { install_flat_to "$1"; configure_hermes; }
+install_to_openclaw()  { install_flat_to "$1"; configure_openclaw; }
+
+# === Tool Configuration ===
 
 configure_kimi() {
     local config_file="$HOME/.kimi/config.toml"
     if [ ! -f "$config_file" ]; then
-        warn "  未找到 Kimi 配置文件: $config_file"
+        warn "  Kimi config not found: $config_file"
         return
     fi
 
-    info "  配置 Kimi Code CLI..."
+    info "  Configuring Kimi Code CLI..."
 
-    # 设置 merge_all_available_skills = true
     if grep -q "^merge_all_available_skills" "$config_file"; then
         sed -i 's/^merge_all_available_skills[[:space:]]*=.*/merge_all_available_skills = true/' "$config_file"
     else
         sed -i '1i\merge_all_available_skills = true' "$config_file"
     fi
 
-    # 设置 extra_skill_dirs
     local dirs='["~/.kimi/skills", "~/.claude/skills"]'
     if grep -q "^extra_skill_dirs" "$config_file"; then
         sed -i "s#^extra_skill_dirs[[:space:]]*=.*#extra_skill_dirs = $dirs#" "$config_file"
@@ -115,75 +108,131 @@ configure_kimi() {
         sed -i "/^merge_all_available_skills/a\\extra_skill_dirs = $dirs" "$config_file"
     fi
 
-    ok "  Kimi 配置已更新"
+    ok "  Kimi config updated"
 }
 
-# === 主流程 ===
+configure_hermes() {
+    local config_file="$HOME/.hermes/config.yaml"
+    if [ ! -f "$config_file" ]; then
+        warn "  Hermes config not found: $config_file"
+        return
+    fi
+
+    info "  Configuring Hermes Agent..."
+
+    if grep -q "external_dirs" "$config_file"; then
+        if ! grep -q "~/.claude/skills" "$config_file"; then
+            warn "  Found existing external_dirs. Please add the following manually:"
+            echo "    - ~/.claude/skills"
+            echo "    - ~/.kimi/skills"
+        else
+            ok "  External skill dirs already configured"
+        fi
+    else
+        {
+            echo ""
+            echo "skills:"
+            echo "  external_dirs:"
+            echo "    - ~/.claude/skills"
+            echo "    - ~/.kimi/skills"
+        } >> "$config_file"
+        ok "  Hermes config updated"
+    fi
+}
+
+configure_openclaw() {
+    local config_file="$HOME/.openclaw/openclaw.json"
+    if [ ! -f "$config_file" ]; then
+        warn "  OpenClaw config not found: $config_file"
+        return
+    fi
+
+    info "  Configuring OpenClaw..."
+
+    if grep -q "extraDirs" "$config_file"; then
+        if ! grep -q "~/.claude/skills" "$config_file"; then
+            warn "  Found existing extraDirs. Please add the following manually:"
+            echo "    \"$HOME/.claude/skills\","
+            echo "    \"$HOME/.kimi/skills\""
+        else
+            ok "  Extra skill dirs already configured"
+        fi
+    else
+        if grep -q '"skills"' "$config_file" || grep -q "'skills'" "$config_file" || grep -q '"load"' "$config_file"; then
+            warn "  Complex config detected. Please add extraDirs manually under skills.load:"
+            echo "    \"$HOME/.claude/skills\","
+            echo "    \"$HOME/.kimi/skills\""
+        else
+            {
+                echo ""
+                echo "skills: {"
+                echo "  load: {"
+                echo "    extraDirs: [\"$HOME/.claude/skills\", \"$HOME/.kimi/skills\"]"
+                echo "  }"
+                echo "}"
+            } >> "$config_file"
+            ok "  OpenClaw config updated"
+        fi
+    fi
+}
+
+# === Main Flow ===
 
 main() {
     echo ""
-    echo "====================== Skills 安装工具 ======================"
+    echo "====================== Skills Installer ======================"
     echo ""
 
-    # 检测平台
     local detected=()
     while IFS= read -r t; do
         detected+=("$t")
     done < <(detect_tools)
 
     if [ ${#detected[@]} -eq 0 ]; then
-        warn "未检测到任何 AI 编程工具"
+        warn "No AI coding tools detected"
         echo ""
-        echo "支持的安装目标:"
-        echo "  ~/.claude/skills     (Claude Code)"
-        echo "  ~/.kimi/skills       (Kimi Code CLI)"
-        echo "  ~/.codex/skills      (OpenAI Codex)"
-        echo "  ~/.codebuddy/skills  (CodeBuddy)"
+        echo "Supported targets:"
+        platform_registry | while IFS='|' read -r key name dir; do
+            eval local d="$dir"
+            printf "  %-20s (%s)\n" "$d" "$name"
+        done
         echo ""
-        fail "请至少安装一个支持的 AI 工具后再运行此脚本"
+        fail "Please install at least one supported AI tool before running this script"
     fi
 
-    # 显示检测到的平台
-    info "检测到以下工具:"
+    info "Detected tools:"
     for t in "${detected[@]}"; do
-        echo "  • $(tool_name "$t")"
+        echo "  - $(platform_name "$t")"
     done
     echo ""
 
-    # 统计 skills
     local skill_count=$(count_skills)
-    info "将要安装: $skill_count 个 Skills"
+    info "Skills to install: $skill_count"
     echo ""
 
-    # 确认
     if [ -t 0 ]; then
-        read -rp "按 Enter 开始安装，或输入 n 取消: " confirm
+        read -rp "Press Enter to install, or type n to cancel: " confirm
         if [ "$confirm" = "n" ] || [ "$confirm" = "N" ]; then
-            info "已取消"
+            info "Cancelled"
             exit 0
         fi
     fi
 
-    # 执行安装
     for tool in "${detected[@]}"; do
-        local dest=$(tool_global_dir "$tool")
+        local dest=$(platform_dir "$tool")
+        local installer="install_to_$tool"
         echo ""
-        info "安装到 $(tool_name "$tool"): $dest"
+        info "Installing to $(platform_name "$tool"): $dest"
         mkdir -p "$dest"
-        install_all_to "$dest"
-
-        # Kimi 额外配置
-        if [ "$tool" = "kimi" ]; then
-            configure_kimi
-        fi
+        "$installer" "$dest"
     done
 
     echo ""
-    ok "安装完成！"
+    ok "Installation complete!"
     echo ""
-    info "已安装到以下平台:"
+    info "Installed to:"
     for tool in "${detected[@]}"; do
-        echo "  • $(tool_name "$tool") → $(tool_global_dir "$tool")"
+        echo "  - $(platform_name "$tool") -> $(platform_dir "$tool")"
     done
     echo ""
 }
