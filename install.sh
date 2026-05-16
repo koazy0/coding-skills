@@ -53,10 +53,15 @@ detect_tools() {
 
 # === Install Strategies ===
 
-cp_to() {
+cp_to_safe() {
     local src="$1" dst="$2"
+    if [ -d "$dst" ] && [ -f "$dst/SKILL.md" ]; then
+        warn "  -> skipped (already exists): $(basename "$dst")"
+        return 1
+    fi
     mkdir -p "$dst"
     cp -r "$src"/* "$dst/"
+    return 0
 }
 
 # Flat structure: dest/<name>/SKILL.md
@@ -65,8 +70,9 @@ install_flat_to() {
     for skill_dir in "$SKILLS_DIR"/*/; do
         [ -f "$skill_dir/SKILL.md" ] || continue
         local name=$(basename "$skill_dir")
-        cp_to "$skill_dir" "$dest/$name"
-        ok "  -> $name"
+        if cp_to_safe "$skill_dir" "$dest/$name"; then
+            ok "  -> $name"
+        fi
     done
 }
 
