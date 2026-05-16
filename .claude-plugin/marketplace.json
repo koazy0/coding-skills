@@ -1,0 +1,20 @@
+{
+  "metadata": {
+    "name": "coding-skills",
+    "description": "Flat coding skills for AI agents"
+  },
+  "plugins": [
+    {
+      "name": "coding-skills",
+      "source": "coding-skills",
+      "skills": [
+        "./skills/api-doc-style",
+        "./skills/code-audit",
+        "./skills/commit-style",
+        "./skills/feature-workflow",
+        "./skills/karpathy-style",
+        "./skills/project-init"
+      ]
+    }
+  ]
+}
