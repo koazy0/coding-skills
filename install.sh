@@ -3,10 +3,18 @@ set -euo pipefail
 
 # Skills multi-platform installer
 # Project structure: flat  (skills/<name>/SKILL.md)
-# Usage: bash install.sh
+# Usage: bash install.sh [--force]
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SKILLS_DIR="$SCRIPT_DIR/skills"
+
+# Parse args
+FORCE_INSTALL=false
+for arg in "$@"; do
+    case "$arg" in
+        --force) FORCE_INSTALL=true ;;
+    esac
+done
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -55,7 +63,7 @@ detect_tools() {
 
 cp_to_safe() {
     local src="$1" dst="$2"
-    if [ -d "$dst" ] && [ -f "$dst/SKILL.md" ]; then
+    if [ "$FORCE_INSTALL" != "true" ] && [ -d "$dst" ] && [ -f "$dst/SKILL.md" ]; then
         warn "  -> skipped (already exists): $(basename "$dst")"
         return 1
     fi
@@ -213,6 +221,10 @@ main() {
     echo ""
 
     local skill_count=$(count_skills)
+    if [ "$FORCE_INSTALL" = "true" ]; then
+        warn "Force mode enabled: existing skills will be overwritten"
+        echo ""
+    fi
     info "Skills to install: $skill_count"
     echo ""
 
